@@ -14,6 +14,9 @@ import javax.swing.JLabel;
 import java.util.List;
 
 public class ManagerClient {
+    private static String employeeIpAddress;
+    private static int employeePort;
+
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         try {
@@ -67,9 +70,12 @@ public class ManagerClient {
                             break;
                         case 3:
                             employee.startChatServer();
-                            System.out.println("Employee IP: " + employee.getIPAddress());
-                            System.out.println("Employee Port: " + employee.getPortNumber());
-                            startChat(employee.getIPAddress(), employee.getPortNumber(), scanner);
+                            employeeIpAddress = employee.getIPAddress();
+                            employeePort = employee.getPortNumber();
+                            System.out.println("Employee IP: " + employeeIpAddress);
+                            System.out.println("Employee Port: " + employeePort);
+                            startListeningForIPAddressChange(coordinator, employeeName);
+                            startChat(scanner);
                             break;
                         case 4:
                             // Break the inner loop to choose another employee
@@ -112,8 +118,8 @@ public class ManagerClient {
         }
     }
 
-    private static void startChat(String ipAddress, int portNumber, Scanner scanner) {
-        try (Socket socket = new Socket(ipAddress, portNumber);
+    private static void startChat(Scanner scanner) {
+        try (Socket socket = new Socket(employeeIpAddress, employeePort);
              BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)) {
 
@@ -145,5 +151,25 @@ public class ManagerClient {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static void startListeningForIPAddressChange(Coordinator coordinator, String employeeName) {
+        new Thread(() -> {
+            try {
+                while (true) {
+                    Thread.sleep(5000); // Check every 5 seconds
+                    Employee employee = coordinator.getEmployeeByName(employeeName);
+                    String newIpAddress = employee.getIPAddress();
+                    int newPort = employee.getPortNumber();
+                    if (!newIpAddress.equals(employeeIpAddress) || newPort != employeePort) {
+                        employeeIpAddress = newIpAddress;
+                        employeePort = newPort;
+                        System.out.println("Employee IP Address or Port has changed. Reconnecting...");
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
     }
 }
