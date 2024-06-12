@@ -125,6 +125,7 @@ public class EmployeeImp extends UnicastRemoteObject implements Employee {
         }
     }
 
+
     private static class ChatHandler implements Runnable {
         private Socket socket;
 
@@ -137,16 +138,38 @@ public class EmployeeImp extends UnicastRemoteObject implements Employee {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                  PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)) {
                 Scanner scanner = new Scanner(System.in);
-                String message;
-                while ((message = reader.readLine()) != null) {
-                    System.out.println("Manager: " + message);
-                    System.out.print("Reply: ");
-                    String reply = scanner.nextLine();
-                    writer.println(reply);
-                }
+
+                Thread readThread = new Thread(() -> {
+                    String message;
+                    try {
+                        while ((message = reader.readLine()) != null) {
+                            System.out.println("Manager: " + message);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+
+                Thread writeThread = new Thread(() -> {
+                    String message;
+                    try {
+                        while (!(message = scanner.nextLine()).equalsIgnoreCase("exit")) {
+                            writer.println(message);
+                        }
+                        socket.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+
+                readThread.start();
+                writeThread.start();
+
+                readThread.join();
+                writeThread.join();
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-    }
-}
+    }}

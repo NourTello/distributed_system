@@ -9,4 +9,5 @@ public interface Employee extends Remote {
     String getIPAddress() throws RemoteException;
     int getPortNumber() throws RemoteException;
     void startChatServer() throws RemoteException;
+
 }
